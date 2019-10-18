@@ -791,8 +791,7 @@ Proof. simpl. reflexivity.  Qed.
     function.  (It can be done with just one previously defined
     function, but you can use two if you need to.) *)
 
-Definition ltb (n m : nat) : bool
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition ltb (n m : nat) : bool := (n <=? m) && negb (n =? m).
 
 Notation "x <? y" := (ltb x y) (at level 70) : nat_scope.
 
