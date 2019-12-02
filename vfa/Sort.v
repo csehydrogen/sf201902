@@ -118,7 +118,13 @@ Search Permutation.
 
 Lemma insert_perm: forall x l, Permutation (x::l) (insert x l).
 Proof.
-(* FILL IN HERE *) Admitted.
+intros.
+induction l.
+- auto.
+- simpl. destruct (x <=? a).
+  + auto.
+  + eapply perm_trans. apply perm_swap. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars (sort_perm)  *)
@@ -126,7 +132,11 @@ Proof.
 
 Theorem sort_perm: forall l, Permutation l (sort l).
 Proof.
-(* FILL IN HERE *) Admitted.
+intros.
+induction l.
+- auto.
+- simpl. eapply perm_trans. 2:apply insert_perm. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars (insert_sorted)  *)
