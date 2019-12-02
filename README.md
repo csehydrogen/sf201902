@@ -11,12 +11,14 @@
 
 ### Grading
 
-- Exams: 40% (mid-term 20% and final 30%)
+- Exams: 50% (mid-term 20% and final 30%)
 - Assignments: 45%
 - Attendance: 5%
 
 ### Announcement
 
+- Nov. 9: Assignment 3 is uploaded.
+- Oct. 31: See [Perm_automation.v](Perm_automation.v) for the shorter proof which is explained at the class
 - Oct. 12: Assignment 2 is uploaded.
 - Oct. 8: Midterm will be held on Oct. 26th Sat, 7 - 11 pm at 302동 소프트웨어실습실 (https://cse.snu.ac.kr/facility/소프트웨어-실험실 ).
 - Sep. 28: Assignment 1 is uploaded.
@@ -29,6 +31,7 @@
 |------------	|-----------------------------------------------------------------------------------
 | Oct.6 23:59  	| Assignment 1                   	 	 	 	 	 	 	 	 	 	 	 	 	 	|
 | Oct.20 23:59 	| Assignment 2                   	 	 	 	 	 	 	 	 	 	 	 	 	 	|
+| Nov.24 23:59 	| Assignment 3                   	 	 	 	 	 	 	 	 	 	 	 	 	 	|
 
 
 ### Coq
@@ -50,4 +53,4 @@
     + Emacs: [Company-Coq](https://github.com/cpitclaudel/company-coq). Follow the setup instructions.
         * If it shows `Searching for program No such file or directory coqtop` error, please add `(custom-set-variables '(coq-prog-name "PATH/TO/coqtop"))` to `.emacs` file.
         * In case of MacOS, coqtop is at `/Applications/CoqIDE_8.9.1.app/Contents/Resources/bin/`.
-
+    + Visual Studio Code: Install VSCoq
