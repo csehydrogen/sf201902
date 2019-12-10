@@ -119,9 +119,12 @@ Qed.
     [rewrite].  What are the situations where both can usefully be
     applied? *)
 
-(* FILL IN HERE 
+(**
+[apply p->q] changes a goal [q] into [p].
+[rewrite p=q] changes each [p] in a goal into [q].
+**)
 
-    [] *)
+(** [] *)
 
 (* ################################################################# *)
 (** * The [apply with] Tactic *)
@@ -613,7 +616,7 @@ Qed.
     Give a careful informal proof of [eqb_true], being as explicit
     as possible about quantifiers. *)
 
-(* FILL IN HERE *)
+(* Skipping informal ones... *)
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_informal_proof : option (nat*string) := None.
@@ -1113,9 +1116,9 @@ Qed.
    Theorem: For any [nat]s [n] [m], [(n =? m) = (m =? n)].
 
    Proof: *)
-   (* FILL IN HERE 
+   (* Skipping informal ones... *)
 
-    [] *)
+(** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (eqb_trans)  *)
 Theorem eqb_trans : forall n m p,

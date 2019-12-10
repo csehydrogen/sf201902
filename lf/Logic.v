@@ -464,7 +464,7 @@ Proof.
 
    _Theorem_: [P] implies [~~P], for any proposition [P]. *)
 
-(* FILL IN HERE *)
+(* Skipping informal ones... *)
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_double_neg_inf : option (nat*string) := None.
@@ -498,7 +498,7 @@ Qed.
     Write an informal proof (in English) of the proposition [forall P
     : Prop, ~(P /\ ~P)]. *)
 
-(* FILL IN HERE *)
+(* Skipping informal ones... *)
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_informal_not_PNP : option (nat*string) := None.
@@ -1599,9 +1599,9 @@ Qed.
 (** Are there any important properties of the function [forallb] which
     are not captured by this specification? *)
 
-(* FILL IN HERE 
+(* Well... I don't know. *)
 
-    [] *)
+(** [] *)
 
 (* ================================================================= *)
 (** ** Classical vs. Constructive Logic *)
@@ -1761,7 +1761,13 @@ Theorem not_exists_dist :
   forall (X:Type) (P : X -> Prop),
     ~ (exists x, ~ P x) -> (forall x, P x).
 Proof.
-  (* FILL IN HERE *) Admitted.
+unfold excluded_middle.
+unfold not.
+intros.
+destruct (H (P x)).
+- apply H1.
+- apply ex_falso_quodlibet. apply H0. exists x. apply H1.
+Qed.
 (** [] *)
 
 (** **** Exercise: 5 stars, standard, optional (classical_axioms)  
@@ -1788,8 +1794,52 @@ Definition de_morgan_not_and_not := forall P Q:Prop,
 Definition implies_to_or := forall P Q:Prop,
   (P->Q) -> (~P\/Q).
 
-(* FILL IN HERE 
+Theorem excluded_middle_eq_peirce : excluded_middle <-> peirce.
+Proof.
+unfold excluded_middle. unfold peirce. unfold not.
+split.
+- (* -> *) intros. destruct (H P).
+  + apply H1.
+  + apply H0. intros. apply H1 in H2. destruct H2.
+- (* <- *) intros. apply H with (Q := False). intros.
+  (* now same as [excluded_middle_irrefutable] *)
+  right. intros. apply H0. left. apply H1.
+Qed.
 
-    [] *)
+Theorem excluded_middle_eq_double_negation_elimination : excluded_middle <-> double_negation_elimination.
+Proof.
+unfold excluded_middle. unfold double_negation_elimination. unfold not.
+split.
+- (* -> *) intros. destruct (H P).
+  + apply H1.
+  + apply H0 in H1. destruct H1.
+- (* <- *) intros. apply H. intros. apply H0.
+  (* now same as [excluded_middle_irrefutable] *)
+  right. intros. apply H0. left. apply H1.
+Qed.
+
+Theorem excluded_middle_eq_de_morgan_not_and_not : excluded_middle <-> de_morgan_not_and_not.
+Proof.
+unfold excluded_middle. unfold de_morgan_not_and_not. unfold not.
+split.
+- (* -> *) intros. destruct (H P).
+  + left. apply H1.
+  + right. destruct (H Q).
+    * apply H2.
+    * destruct H0. split. apply H1. apply H2.
+- (* <- *) intros. apply H. intros. destruct H0. apply H1 in H0. destruct H0.
+Qed.
+
+Theorem excluded_middle_eq_implies_to_or : excluded_middle <-> implies_to_or.
+Proof.
+unfold excluded_middle. unfold implies_to_or. unfold not.
+split.
+- (* -> *) intros. destruct (H P).
+  + right. apply H0. apply H1.
+  + left. apply H1.
+- (* <- *) intros. apply or_commut. apply H. intros. apply H0. 
+Qed.
+
+(** [] *)
 
 (* Wed Jan 9 12:02:45 EST 2019 *)

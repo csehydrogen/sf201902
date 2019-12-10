@@ -164,7 +164,7 @@ Inductive grumble (X:Type) : Type :=
       - [e mumble (b c 0)]
       - [e bool (b c 0)]
       - [c]  *)
-(* FILL IN HERE *)
+(* NO YES YES YES YES NO YES *)
 End MumbleGrumble.
 
 (* Do not modify the following line: *)
@@ -923,7 +923,7 @@ Proof. reflexivity. Qed.
     situation where it would be useful for [X] and [Y] to be
     different? *)
 
-(* FILL IN HERE *)
+(* When you build a list from elements, [Y] will be [list X]. *)
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_fold_types_different : option (nat*string) := None.
@@ -1106,7 +1106,7 @@ Qed.
 
    forall X n l, length l = n -> @nth_error X l n = None
 *)
-(* FILL IN HERE *)
+(* Skipping informal ones... *)
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_informal_proof : option (nat*string) := None.

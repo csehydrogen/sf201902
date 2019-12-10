@@ -988,9 +988,16 @@ Qed.
     involving the functions [count] and [sum], and prove it using
     Coq.  (You may find that the difficulty of the proof depends on
     how you defined [count]!) *)
-(* FILL IN HERE 
-
-    [] *)
+Theorem bag_count_sum : forall v s1 s2, count v (sum s1 s2) = count v s1 + count v s2.
+Proof.
+intros.
+induction s1.
+- reflexivity.
+- simpl. rewrite IHs1. destruct (v =? n).
+  + reflexivity.
+  + reflexivity.
+Qed.
+(** [] *)
 
 (** **** Exercise: 4 stars, advanced (rev_injective)  
 
@@ -1242,7 +1249,7 @@ Inductive baz : Type :=
 (** How _many_ elements does the type [baz] have? (Explain in words,
     in a comment.) *)
 
-(* FILL IN HERE *)
+(* 0, since no 'base' baz element exists. *)
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_baz_num_elts : option (nat*string) := None.
