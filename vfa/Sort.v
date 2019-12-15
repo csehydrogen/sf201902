@@ -147,7 +147,17 @@ Qed.
 Lemma insert_sorted:
   forall a l, sorted l -> sorted (insert a l).
 Proof.
-(* FILL IN HERE *) Admitted.
+intros.
+induction l as [| a0 l0].
+- (* l = [] *) simpl. constructor.
+- (* l = a0 :: l0 *) simpl. destruct (ble_reflect a a0).
+  + (* a <= a0 *) constructor. auto. auto.
+  + (* a > a0 *) inversion H as [ | | b0 a1 l1]; subst; clear H.
+    * (* l = a0 :: [] *) constructor. omega. constructor.
+    * (* l = a0 :: a1 :: l1 *) simpl in *. destruct (ble_reflect a a1).
+      { constructor. omega. constructor. omega. auto. }
+      { constructor. omega. auto. }
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars (sort_sorted)  *)
@@ -155,7 +165,12 @@ Proof.
 
 Theorem sort_sorted: forall l, sorted (sort l).
 Proof.
-(* FILL IN HERE *) Admitted.
+intros.
+induction l.
+- constructor.
+- simpl. apply insert_sorted. auto.
+Qed.
+
 (** [] *)
 
 (** Now we wrap it all up.  *)
@@ -186,7 +201,19 @@ Lemma sorted_sorted': forall al, sorted al -> sorted' al.
     you may have to think about how to approach it, and try out
     one or two different ideas.*)
 
-(* FILL IN HERE *) Admitted.
+Proof.
+intros.
+induction H.
+- unfold sorted'. intros. simpl in H. omega.
+- unfold sorted'. intros. simpl in H. omega.
+- unfold sorted' in *. intros. destruct i.
+  + simpl. destruct j. omega. destruct j. auto.
+    assert (y <= nth j l 0).
+    { apply (IHsorted 0 (S j)). simpl. simpl in H1. omega. }
+    omega.
+  + destruct j. omega. apply (IHsorted i j). simpl. simpl in H1. omega.
+Qed.
+
 (** [] *)
 
 (** **** Exercise: 3 stars, optional (sorted'_sorted)  *)
@@ -196,7 +223,17 @@ Lemma sorted'_sorted: forall al, sorted' al -> sorted al.
     because [sorted'] is not an inductive predicate. *)
 
 Proof.
-(* FILL IN HERE *) Admitted.
+intros.
+induction al.
+- constructor.
+- destruct al.
+  + constructor.
+  + constructor.
+    * apply (H 0 1). simpl. omega.
+    * apply IHal. unfold sorted' in *. intros. apply (H (S i) (S j)).
+      simpl. simpl in H0. omega.
+Qed.
+
 (** [] *)
 
 (* ################################################################# *)
@@ -225,19 +262,91 @@ Lemma Forall_nth:
   forall {A: Type} (P: A -> Prop) d (al: list A),
      Forall P al <-> (forall i,  i < length al -> P (nth i al d)).
 Proof.
-  (* FILL IN HERE *) Admitted.
+split.
+- induction al.
+  + intros. simpl in H0. omega.
+  + intros. inversion H; subst; clear H. simpl. destruct i. auto.
+    apply IHal. auto. simpl in H0. omega.
+- induction al.
+  + constructor.
+  + intros. constructor. apply (H 0). simpl. omega.
+    apply IHal. intros. apply (H (S i)). simpl. omega.
+Qed.
+
 (** [] *)
 
-
 (** **** Exercise: 4 stars, optional (insert_sorted')  *)
+
+Lemma Forall_nth_right:
+  forall {A: Type} (P: A -> Prop) d (al: list A),
+     Forall P al -> (forall i,  i < length al -> P (nth i al d)).
+Proof.
+intros. apply Forall_nth. apply H. apply H0.
+Qed.
+
+Lemma sorted'_remove_first: forall a l, sorted' (a :: l) -> sorted' l.
+Proof.
+unfold sorted'.
+intros.
+apply (H (S i) (S j)).
+simpl. omega.
+Qed.
+
+Lemma sorted'_remove_second: forall a0 a l, sorted' (a0 :: a :: l) -> sorted' (a0 :: l).
+Proof.
+unfold sorted'. intros. simpl in H0. destruct i.
++ destruct j. omega. apply (H 0 (S (S j))). simpl. omega.
++ destruct j. omega. apply (H (S (S i)) (S (S j))). simpl. omega.
+Qed.
+
+Lemma sorted'_Forall: forall a l, sorted' (a :: l) -> Forall (fun x => a <= x) l.
+Proof.
+intros.
+generalize dependent a.
+induction l.
+- constructor.
+- constructor. apply (H 0 1). simpl. omega. apply IHl.
+  apply sorted'_remove_second in H. apply H.
+Qed.
+
+Lemma sorted'_Forall_insert: forall a0 a l, a0 < a -> sorted' (a0 :: l) -> Forall (fun x => a0 <= x) (insert a l).
+Proof.
+induction l.
+- intros. constructor. omega. constructor.
+- simpl. destruct (ble_reflect a a1).
+  + constructor. omega. constructor. omega. apply sorted'_Forall. apply sorted'_remove_second in H0. apply H0.
+  + intros. constructor. apply (H0 0 1). simpl. omega. apply IHl. omega. eapply sorted'_remove_second. apply H0.
+Qed.
+
 Lemma insert_sorted':
   forall a l, sorted' l -> sorted' (insert a l).
-(* FILL IN HERE *) Admitted.
+Proof.
+induction l.
+- simpl. intros. unfold sorted'. intros. simpl in H0. omega.
+- intros. simpl. destruct (ble_reflect a a0).
+  + unfold sorted'. intros. destruct i.
+    * destruct j. omega. destruct j. simpl. apply l0.
+      simpl. assert (a0 <= nth j l 0). { apply (H 0 (S j)). simpl. simpl in H0. omega. } omega.
+    * destruct j. omega. apply (H i j). simpl. simpl in H0. omega.
+  + unfold sorted'. intros. simpl in H0. destruct i.
+    * destruct j. omega. simpl.
+      apply not_le in n.
+      apply (sorted'_Forall_insert a0 a l) in n.
+      apply Forall_nth_right with (fun x : nat => a0 <= x) 0 (insert a l) j in n.
+      apply n. omega. apply H.
+    * destruct j. omega. simpl. apply IHl. apply sorted'_remove_first with a0. apply H.
+      omega.
+Qed.
+
 (** [] *)
 
 (** **** Exercise: 4 stars, optional (insert_sorted')  *)
 Theorem sort_sorted': forall l, sorted' (sort l).
-(* FILL IN HERE *) Admitted.
+Proof.
+induction l.
+- unfold sorted'. simpl. intros. omega.
+- simpl. apply insert_sorted'. auto.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
