@@ -437,12 +437,22 @@ Qed.
     as elegant as possible. *)
 
 Fixpoint optimize_0plus_b (b : bexp) : bexp
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+:= match b with
+| BEq a1 a2 => BEq (optimize_0plus a1) (optimize_0plus a2)
+| BLe a1 a2 => BLe (optimize_0plus a1) (optimize_0plus a2)
+| _ => b
+end.
 
 Theorem optimize_0plus_b_sound : forall b,
   beval (optimize_0plus_b b) = beval b.
 Proof.
-  (* FILL IN HERE *) Admitted.
+intros.
+destruct b;
+try reflexivity;
+try simpl;
+try repeat rewrite optimize_0plus_sound;
+try reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, standard, optional (optimize)  
@@ -455,9 +465,9 @@ Proof.
     optimization and its correctness proof -- and build up to
     something more interesting incrementially.)  *)
 
-(* FILL IN HERE 
+(* I'm too lazy for this *)
 
-    [] *)
+(** [] *)
 
 (* ================================================================= *)
 (** ** Defining New Tactic Notations *)
@@ -729,7 +739,17 @@ Inductive aevalR : aexp -> nat -> Prop :=
 
     Write out a corresponding definition of boolean evaluation as a
     relation (in inference rule notation). *)
-(* FILL IN HERE *)
+
+Reserved Notation "e '//' b" (at level 90, left associativity).
+
+Inductive bevalR : bexp -> bool -> Prop :=
+| E_BTrue : BTrue // true
+| E_BFalse : BFalse // false
+| E_BEq e1 e2 n1 n2 : e1 \\ n1 -> e2 \\ n2 -> BEq e1 e2 // n1 =? n2
+| E_BLe e1 e2 n1 n2 : e1 \\ n1 -> e2 \\ n2 -> BLe e1 e2 // n1 <=? n2
+| E_BNot e1 b1 : e1 // b1 -> BNot e1 // negb b1
+| E_BAnd e1 e2 b1 b2 : e1 // b1 -> e2 // b2 -> BAnd e1 e2 // andb b1 b2
+where "e '//' b" := (bevalR e b) : type_scope.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_beval_rules : option (nat*string) := None.
@@ -797,14 +817,25 @@ Qed.
     Write a relation [bevalR] in the same style as
     [aevalR], and prove that it is equivalent to [beval]. *)
 
-Inductive bevalR: bexp -> bool -> Prop :=
-(* FILL IN HERE *)
-.
-
 Lemma beval_iff_bevalR : forall b bv,
   bevalR b bv <-> beval b = bv.
 Proof.
-  (* FILL IN HERE *) Admitted.
+split.
+- intros.
+  induction H;
+  try apply aeval_iff_aevalR in H;
+  try apply aeval_iff_aevalR in H0;
+  try subst;
+  try reflexivity.
+- intros. subst.
+  induction b;
+  constructor;
+  try (apply aeval_iff_aevalR; reflexivity; apply aeval_iff_aevalR; reflexivity);
+  try (apply IHb);
+  try (apply IHb1);
+  try (apply IHb2).
+Qed.
+
 (** [] *)
 
 End AExp.
@@ -1469,7 +1500,12 @@ Example ceval_example2:
     X ::= 0;; Y ::= 1;; Z ::= 2
   ]=> (Z !-> 2 ; Y !-> 1 ; X !-> 0).
 Proof.
-  (* FILL IN HERE *) Admitted.
+apply E_Seq with (X !-> 0).
+- apply E_Ass. reflexivity.
+- apply E_Seq with (Y !-> 1; X !-> 0).
+  + apply E_Ass. reflexivity.
+  + apply E_Ass. reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (pup_to_n)  
@@ -1480,14 +1516,33 @@ Proof.
    (this is trickier than you might expect). *)
 
 Definition pup_to_n : com
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+:=
+Y ::= 0;;
+WHILE ~(X = 0) DO
+  Y ::= Y + X;;
+  X ::= X - 1
+END.
 
 Theorem pup_to_2_ceval :
   (X !-> 2) =[
     pup_to_n
   ]=> (X !-> 0 ; Y !-> 3 ; X !-> 1 ; Y !-> 2 ; Y !-> 0 ; X !-> 2).
 Proof.
-  (* FILL IN HERE *) Admitted.
+apply E_Seq with (Y !-> 0; X !-> 2).
+- apply E_Ass. reflexivity.
+- apply E_WhileTrue with (X !-> 1 ; Y !-> 2 ; Y !-> 0 ; X !-> 2).
+  + reflexivity.
+  + apply E_Seq with (Y !-> 2 ; Y !-> 0 ; X !-> 2).
+    * apply E_Ass. reflexivity.
+    * apply E_Ass. reflexivity.
+  + apply E_WhileTrue with (X !-> 0 ; Y !-> 3 ; X !-> 1 ; Y !-> 2 ; Y !-> 0 ; X !-> 2).
+    * reflexivity.
+    * apply E_Seq with (Y !-> 3 ; X !-> 1 ; Y !-> 2 ; Y !-> 0 ; X !-> 2).
+      { apply E_Ass. reflexivity. }
+      { apply E_Ass. reflexivity. }
+    * apply E_WhileFalse. reflexivity.
+Qed.
+
 (** [] *)
 
 (* ================================================================= *)
@@ -1567,7 +1622,16 @@ Proof.
 
     State and prove a specification of [XtimesYinZ]. *)
 
-(* FILL IN HERE *)
+Theorem XtimesYinZ_spec : forall st x y st',
+st X = x -> st Y = y ->
+st =[ XtimesYinZ ]=> st' -> 
+st' Z = x * y.
+Proof.
+intros.
+inversion H1; clear H1; subst.
+simpl.
+apply t_update_eq.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_XtimesYinZ_spec : option (nat*string) := None.
@@ -1586,7 +1650,11 @@ Proof.
       contradictory (and so can be solved in one step with
       [discriminate]). *)
 
-  (* FILL IN HERE *) Admitted.
+induction contra; try discriminate.
+- inversion Heqloopdef. rewrite H1 in H. simpl in H. discriminate.
+- apply IHcontra2. apply Heqloopdef.
+Qed.
+
 (** [] *)
 
 (** **** Exercise: 3 stars, standard (no_whiles_eqv)  
@@ -1615,13 +1683,33 @@ Close Scope imp_scope.
     while loops.  Then prove its equivalence with [no_whiles]. *)
 
 Inductive no_whilesR: com -> Prop :=
- (* FILL IN HERE *)
+| no_whilesR_skip : no_whilesR SKIP
+| no_whilesR_ass : forall x a, no_whilesR (x ::= a)
+| no_whilesR_seq : forall c1 c2, no_whilesR c1 -> no_whilesR c2 -> no_whilesR (c1 ;; c2)
+| no_whilesR_if : forall b c1 c2, no_whilesR c1 -> no_whilesR c2 -> no_whilesR (TEST b THEN c1 ELSE c2 FI)
 .
 
 Theorem no_whiles_eqv:
    forall c, no_whiles c = true <-> no_whilesR c.
 Proof.
-  (* FILL IN HERE *) Admitted.
+split.
+- intros. induction c.
+  + constructor.
+  + constructor.
+  + simpl in H. apply andb_true_iff in H. destruct H. constructor.
+    apply IHc1. apply H. apply IHc2. apply H0.
+  + simpl in H. apply andb_true_iff in H. destruct H. constructor.
+    apply IHc1. apply H. apply IHc2. apply H0.
+  + simpl in H. discriminate.
+- intros. induction H.
+  + reflexivity.
+  + reflexivity.
+  + simpl. apply andb_true_iff. split.
+    apply IHno_whilesR1. apply IHno_whilesR2.
+  + simpl. apply andb_true_iff. split.
+    apply IHno_whilesR1. apply IHno_whilesR2.
+Qed.
+
 (** [] *)
 
 (** **** Exercise: 4 stars, standard (no_whiles_terminating)  
@@ -1631,7 +1719,19 @@ Proof.
 
     Use either [no_whiles] or [no_whilesR], as you prefer. *)
 
-(* FILL IN HERE *)
+Theorem no_whiles_terminating:
+forall c, no_whilesR c -> forall st, exists st', st =[ c ]=> st'.
+Proof.
+intros c H.
+induction H.
+- intros. exists st. apply E_Skip.
+- intros. exists (x !-> aeval st a; st). apply E_Ass. reflexivity.
+- intros. destruct IHno_whilesR1 with st. destruct IHno_whilesR2 with x.
+  exists x0. apply E_Seq with x. apply H1. apply H2.
+- intros. destruct (beval st b) eqn:E.
+  + destruct IHno_whilesR1 with st. exists x. apply E_IfTrue. apply E. apply H1.
+  + destruct IHno_whilesR2 with st. exists x. apply E_IfFalse. apply E. apply H1.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_no_whiles_terminating : option (nat*string) := None.
