@@ -381,13 +381,22 @@ Lemma ins_SearchTree:
                     SearchTree' lo s hi ->
                     SearchTree' lo (ins x vx s) hi.
 Proof.
-(* FILL IN HERE *) Admitted.
+intros.
+induction H1.
+- repeat constructor; omega.
+- simpl. bdestruct (ltb x k); bdestruct (ltb k x); try omega.
+  + apply balance_SearchTree. apply IHSearchTree'1; try omega. auto.
+  + apply balance_SearchTree. auto. apply IHSearchTree'2; try omega.
+  + assert (int2Z k = int2Z x) by omega. Search int2Z. constructor. rewrite <- H3. auto. rewrite <- H3. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars (valid)  *)
 
 Lemma empty_tree_SearchTree: SearchTree empty_tree.
-(* FILL IN HERE *) Admitted.
+Proof.
+apply ST_intro with 0 0. constructor. omega.
+Qed.
 
 Lemma SearchTree'_le:
   forall lo t hi, SearchTree' lo t hi -> lo <= hi.
@@ -410,9 +419,32 @@ apply IHSearchTree'1; omega.
 apply IHSearchTree'2; omega.
 Qed.
 
+Lemma SearchTree'_ignore_color : forall lo hi c c' l k v r, SearchTree' lo (T c l k v r) hi -> SearchTree' lo (T c' l k v r) hi.
+Proof.
+intros. inv H. constructor; auto.
+Qed.
+
 Lemma insert_SearchTree: forall x vx s,
     SearchTree s -> SearchTree (insert x vx s).
-(* FILL IN HERE *) Admitted.
+Proof.
+intros. inv H.
+unfold insert. unfold makeBlack. destruct (ins x vx s) eqn:E.
+- apply empty_tree_SearchTree.
+- pose proof (SearchTree'_le _ _ _ H0). bdestruct ((int2Z x) <? lo); bdestruct ((int2Z x) <? hi); try omega.
+  + (* x < lo *)
+    apply ST_intro with (int2Z x) hi.
+    apply SearchTree'_ignore_color with c. rewrite <- E. apply ins_SearchTree; try omega.
+    apply expand_range_SearchTree' with lo hi; try omega. auto.
+  + (* lo <= x < hi *)
+    apply ST_intro with lo hi.
+    apply SearchTree'_ignore_color with c. rewrite <- E. apply ins_SearchTree; try omega.
+    auto.
+  + (* hi <= x *)
+    apply ST_intro with lo (1 + int2Z x).
+    apply SearchTree'_ignore_color with c. rewrite <- E. apply ins_SearchTree; try omega.
+    apply expand_range_SearchTree' with lo hi; try omega. auto.
+Qed.
+
 (** [] *)
 
 Import IntMaps.
@@ -436,7 +468,11 @@ Qed.
 Theorem lookup_relate:
   forall k t cts ,   Abs t cts -> lookup k t =  cts (int2Z k).
 Proof.  (* Copy your proof from Extract.v, and adapt it. *)
-(* FILL IN HERE *) Admitted.
+intros.
+induction H.
+- auto.
+- simpl. unfold t_update, combine. bdestruct (ltb k k0); bdestruct (ltb k0 k); bdestruct (int2Z k0 =? int2Z k); bdestruct (int2Z k <? int2Z k0); try omega; auto.
+Qed.
 (** [] *)
 
 Lemma Abs_helper:
@@ -468,7 +504,18 @@ intros.
 inv H.
 unfold balance.
 repeat match goal with
- | H: Abs E _ |- _ => inv H
+ | H: Abs E _ |- _ => inv H (* remain: 1 *)
+ | H: Abs (T _ _ _ _ _) _ |- _ => inv H (* remain: 1 *)
+ | H: SearchTree' _ E _ |- _ => inv H (* remain: 1 *)
+ | H: SearchTree' _ (T _ _ _ _ _) _ |- _ => inv H (* remain: 1 *)
+ | |- Abs match ?c with Red => _ | Black => _ end _ => destruct c (* remain: 2 *)
+ | |- Abs match ?s with E => _ | T _ _ _ _ _ => _ end _ => destruct s (* remain: 58 *)
+ | |- Abs (T _ _ _ _ _) _ => apply Abs_T (* remain: 203 *)
+ | |- Abs E _ => apply Abs_E (* remain: 143 *)
+ | |- _ => assumption (* remain: 21 *)
+ | |- _ => eapply Abs_helper; [repeat econstructor; eassumption | ] (* remain: 21 *)
+ | H: SearchTree' _ _ _ |- _ = _ => apply SearchTree'_le in H (* remain: 21 *)
+ | |- _ => contents_equivalent_prover (* remain: 0 *)
 end.
 (** Add these clauses, one at a time, to your [repeat match goal] tactic,
    and try it out:
@@ -520,8 +567,7 @@ end.
           Now, add a clause to  [match goal] that does this for all the subgoals.
 
    -Qed! *)
-
-(* FILL IN HERE *) Admitted.
+Qed.
 
 (** Extend this list, so that the nth entry shows how many subgoals
     were remaining after you followed the nth instruction in the list above.
@@ -529,9 +575,7 @@ end.
     *before* step 1, after all. *)
 
 Definition how_many_subgoals_remaining :=
-    [1; 1; 1; 1; 1; 2
- 
-  ].
+    [1; 1; 1; 1; 1; 2; 58; 203; 143; 21; 21; 21; 0].
 (** [] *)
 
 (** **** Exercise: 3 stars (ins_relate)  *)
@@ -542,7 +586,35 @@ Theorem ins_relate:
     Abs (ins k v t) (t_update cts (int2Z k) v).
 Proof.  (* Copy your proof from SearchTree.v, and adapt it. 
      No need for fancy proof automation. *)
-(* FILL IN HERE *) Admitted.
+intros.
+induction H0.
+- eapply Abs_helper. repeat constructor. contents_equivalent_prover.
+- assert (Hlr : SearchTree l /\ SearchTree r).
+  { inv H. inv H0. split; econstructor; eauto. }
+  destruct Hlr as [Hl Hr].
+  inv H. inv H0.
+  simpl. bdestruct (ltb k k0); bdestruct (ltb k0 k); try omega.
+  + (* left, k < k0 *)
+    apply balance_relate.
+    * bdestruct (int2Z k <? lo).
+      { apply ST_intro with (lo:=int2Z k) (hi:=hi). constructor.
+        apply ins_SearchTree; try omega. apply expand_range_SearchTree' with (lo:=lo) (hi:=int2Z k0); try omega. auto. auto. }
+      { apply ST_intro with (lo:=lo) (hi:=hi). constructor.
+        apply ins_SearchTree; try omega. auto. auto. }
+    * eapply Abs_helper. repeat constructor; eauto. contents_equivalent_prover.
+  + (* right, k > k0 *)
+    apply balance_relate.
+    * bdestruct (int2Z k <? hi).
+      { apply ST_intro with (lo:=lo) (hi:=hi). constructor.
+        auto. apply ins_SearchTree; try omega. auto. }
+      { apply ST_intro with (lo:=lo) (hi:=int2Z k + 1). constructor.
+        auto. apply ins_SearchTree; try omega. apply expand_range_SearchTree' with (lo:=int2Z k0 + 1) (hi:=hi); try omega. auto. }
+    * eapply Abs_helper. repeat constructor; eauto. contents_equivalent_prover.
+  + (* center, k = k0 *)
+    replace (int2Z k) with (int2Z k0) by omega.
+    eapply Abs_helper. repeat constructor; eauto. contents_equivalent_prover.
+Qed.
+
 (** [] *)
 
 Lemma makeBlack_relate:
@@ -593,6 +665,41 @@ Fixpoint elements' (s: tree) (base: list (key*V)) : list (key * V) :=
 
 Definition elements (s: tree) : list (key * V) := elements' s nil.
 
+Fixpoint slow_elements (s: tree) : list (key * V) :=
+ match s with
+ | E => nil
+ | T _ a k v b => slow_elements a ++ [(k,v)] ++ slow_elements b
+ end.
+
+Theorem elements_slow_elements: elements = slow_elements.
+Proof.
+extensionality s.
+unfold elements.
+assert (forall base, elements' s base = slow_elements s ++ base).
+{
+induction s.
+- auto.
+- simpl. intros. rewrite IHs2. rewrite IHs1. rewrite <- app_assoc. auto.
+}
+rewrite <- app_nil_r. apply H.
+Qed.
+
+Lemma slow_elements_range:
+ forall k v lo t hi,
+  SearchTree' lo t hi ->
+  In (k,v) (slow_elements t) ->
+  lo <= int2Z k < hi.
+Proof.
+intros.
+induction H.
+- contradiction.
+- simpl in H0. apply SearchTree'_le in H. apply SearchTree'_le in H1. Search (In _ (_ ++ _)). apply in_app_iff in H0. destruct H0.
+  + apply IHSearchTree'1 in H0. omega.
+  + apply (in_app_iff [(k0, v0)]) in H0. destruct H0.
+    * inv H0. inv H2. omega. inv H2.
+    * apply IHSearchTree'2 in H0. omega.
+Qed.
+
 Definition elements_property (t: tree) (cts: total_map V) : Prop :=
    forall k v,
      (In (k,v) (elements t) -> cts (int2Z k) = v) /\
@@ -605,7 +712,56 @@ Theorem elements_relate:
   Abs t cts -> 
   elements_property t cts.
 Proof.
-(* FILL IN HERE *) Admitted.
+unfold elements_property.
+rewrite elements_slow_elements.
+intros.
+induction H0.
+- split; contradiction.
+- assert (Hlr : SearchTree l /\ SearchTree r).
+  { inv H. inv H0. split; econstructor; eauto. }
+  destruct Hlr as [Hl Hr].
+  inv H. inv H0.
+  destruct (IHAbs1 Hl) as [Hl0 Hl1]. destruct (IHAbs2 Hr) as [Hr0 Hr1].
+  split.
+  + intros Hin. unfold t_update, combine.
+    bdestruct (int2Z k <? int2Z k0); bdestruct (int2Z k0 =? int2Z k); try omega.
+    * (* k < k0 *)
+      apply Hl0.
+      simpl in Hin.
+      apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+      auto.
+      apply (in_app_or [(k0, vk)]) in Hin. destruct Hin as [Hin | Hin].
+      inv Hin. inv H1. omega. contradiction.
+      apply (slow_elements_range _ _ _ _ _ H8) in Hin. omega.
+    * (* k = k0 *)
+      simpl in Hin.
+      apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+      apply (slow_elements_range _ _ _ _ _ H7) in Hin. omega.
+      apply (in_app_or [(k0, vk)]) in Hin. destruct Hin as [Hin | Hin].
+      inv Hin. inv H1. auto. contradiction.
+      apply (slow_elements_range _ _ _ _ _ H8) in Hin. omega.
+    * (* k > k0 *)
+      simpl in Hin.
+      apply in_app_or in Hin. destruct Hin as [Hin | Hin].
+      apply (slow_elements_range _ _ _ _ _ H7) in Hin. omega.
+      apply (in_app_or [(k0, vk)]) in Hin. destruct Hin as [Hin | Hin].
+      inv Hin. inv H1. omega. contradiction.
+      apply Hr0. auto.
+  + unfold t_update, combine.
+    bdestruct (int2Z k <? int2Z k0); bdestruct (int2Z k0 =? int2Z k); try omega.
+    * (* k < k0 *)
+      intros X.
+      destruct (Hl1 X) as [k' [X0 X1]]. exists k'. split. auto.
+      simpl. apply in_or_app. left. auto.
+    * (* k = k0 *)
+      intros X.
+      exists k0. split. omega.
+      simpl. apply in_or_app. right. apply (in_or_app [_]). left. simpl. auto.
+    * (* k > k0 *)
+      intros X.
+      destruct (Hr1 X) as [k' [X0 X1]]. exists k'. split. auto.
+      simpl. apply in_or_app. right. apply (in_or_app [_]). right. auto.
+Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -643,13 +799,20 @@ Proof.
 Lemma is_redblack_toblack:
   forall s n, is_redblack s Red n -> is_redblack s Black n.
 Proof.
-(* FILL IN HERE *) Admitted.
+intros.
+inv H; constructor; auto.
+Qed.
 
 Lemma makeblack_fiddle:
   forall s n, is_redblack s Black n -> 
             exists n, is_redblack (makeBlack s) Red n.
 Proof.
-(* FILL IN HERE *) Admitted.
+intros.
+inv H.
+- simpl. exists O. constructor.
+- simpl. exists (S n). constructor; apply is_redblack_toblack; auto.
+- simpl. exists (S n0). constructor; auto.
+Qed.
 
 (** [nearly_redblack] expresses, "the tree is a red-black tree, except that
   it's nonempty and it is permitted to have two red nodes in a row at 
@@ -672,6 +835,21 @@ Lemma ins_is_redblack:
     (is_redblack s Red n -> is_redblack (ins x vx s) Black n).
 Proof.
 induction s; intro n; simpl; split; intros; inv H; repeat constructor; auto.
+
+Ltac mytac := repeat match goal with
+| |- context[if ?cond then _ else _] => bdestruct cond
+| |- context[match ?c with _ => _ end] => destruct c eqn:?
+| |- nearly_redblack (T _ _ _ _ _) _ => constructor
+| |- is_redblack (T _ _ _ _ _) _ _ => constructor
+| |- is_redblack E _ _ => constructor
+| |- _ => assumption
+| H : nearly_redblack (T _ _ _ _ _) _ |- _ => inv H
+| H : is_redblack (T _ _ _ _ _) _ _ |- _ => inv H
+| H : is_redblack E _ _ |- _ => inv H
+| H : ins _ _ _ = E |- _ => apply ins_not_E in H; inv H
+| H : is_redblack ?s Red ?n |- is_redblack ?s Black ?n => apply is_redblack_toblack; apply H
+end.
+
 *
 destruct (IHs1 n); clear IHs1.
 destruct (IHs2 n); clear IHs2.
@@ -679,19 +857,39 @@ specialize (H0 H6).
 specialize (H2 H7).
 clear H H1.
 unfold balance.
+mytac.
 
-(** You will need proof automation, in a similar style to
-   the proofs of [ins_not_E] and [balance_relate]. *)
+*
+destruct (IHs1 n0); clear IHs1.
+destruct (IHs2 n0); clear IHs2.
+specialize (H H7).
+specialize (H1 H8).
+clear H0 H2.
+unfold balance.
+mytac.
 
-(* FILL IN HERE *) Admitted.
+*
+destruct (IHs1 n0); clear IHs1.
+destruct (IHs2 n0); clear IHs2.
+specialize (H H7).
+specialize (H1 H8).
+clear H0 H2.
+unfold balance.
+mytac.
+
+Qed.
 
 Lemma insert_is_redblack:
   forall x xv s n, is_redblack s Red n ->
                     exists n', is_redblack (insert x xv s) Red n'.
 Proof.
-  (* Just apply a couple of lemmas: 
-     ins_is_redblack and makeblack_fiddle *)
-(* FILL IN HERE *) Admitted.
+intros.
+unfold insert.
+apply makeblack_fiddle with n.
+apply ins_is_redblack.
+auto.
+Qed.
+
 (** [] *)
 
 End TREES.

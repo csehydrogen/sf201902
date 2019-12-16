@@ -280,23 +280,65 @@ Qed.
 Theorem lookup_relate:
   forall k t cts ,   Abs t cts -> lookup k t =  cts (int2Z k).
 Proof.  (* Copy your proof from SearchTree.v, and adapt it. *)
-(* FILL IN HERE *) Admitted.
+intros.
+induction H.
+- auto.
+- simpl. unfold t_update, combine. bdestruct (ltb k k0); bdestruct (ltb k0 k); bdestruct (int2Z k0 =? int2Z k); bdestruct (int2Z k <? int2Z k0); try omega; auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars (insert_relate)  *)
+Lemma t_update_shadow : forall (A : Type) (m : total_map A) (v1 v2 : A) x,
+  t_update (t_update m x v1) x v2 = t_update m x v2.
+Proof.
+intros. unfold t_update. extensionality x'.
+bdestruct (x =? x'); auto.
+Qed.
+
+Lemma t_update_permute : forall (X : Type) (v1 v2 : X) x1 x2 (m : total_map X),
+  x2 <> x1 ->
+  t_update (t_update m x2 v2) x1 v1 =
+  t_update (t_update m x1 v1) x2 v2.
+Proof.
+intros. unfold t_update. extensionality x.
+bdestruct (x1 =? x); bdestruct (x2 =? x); try omega; auto.
+Qed.
+
 Theorem insert_relate:
  forall k v t cts,
     Abs t cts ->
     Abs (insert k v t) (t_update cts (int2Z k) v).
 Proof.  (* Copy your proof from SearchTree.v, and adapt it. *)
-(* FILL IN HERE *) Admitted.
+intros.
+generalize dependent k.
+generalize dependent v.
+induction H.
+- intros. assert (t_empty default = combine (int2Z k) (t_empty default) (t_empty default)).
+  { unfold combine. extensionality x. bdestruct (x <? int2Z k); auto. }
+  rewrite H. repeat constructor.
+- intros. unfold insert. bdestruct (ltb k k0); bdestruct (ltb k0 k); try omega.
+  + rewrite t_update_permute.
+    assert (t_update (combine (int2Z k) a b) (int2Z k0) v0 = combine (int2Z k) a (t_update b (int2Z k0) v0)).
+    { unfold combine, t_update. extensionality x.
+      bdestruct (int2Z k0 =? x); bdestruct (x <? int2Z k); try omega; try reflexivity. }
+    rewrite H3. constructor. auto. auto. omega.
+  + rewrite t_update_permute.
+    assert (t_update (combine (int2Z k) a b) (int2Z k0) v0 = combine (int2Z k) (t_update a (int2Z k0) v0) b).
+    { unfold combine, t_update. extensionality x.
+      bdestruct (int2Z k0 =? x); bdestruct (x <? int2Z k); try omega; try reflexivity. }
+    rewrite H3. constructor. auto. auto. omega.
+  + assert (int2Z k = int2Z k0) by omega. rewrite H3. rewrite t_update_shadow. constructor. auto. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star (unrealistically_strong_can_relate)  *)
 Lemma unrealistically_strong_can_relate:
  forall t,  exists cts, Abs t cts.
 Proof.  (* Copy-paste your proof from SearchTree.v; it should work as is. *)
-(* FILL IN HERE *) Admitted.
+intros. induction t.
+- eexists. constructor.
+- inv IHt1. inv IHt2. eexists. constructor. apply H. apply H0.
+Qed.
 (** [] *)
 
 End TREES.
