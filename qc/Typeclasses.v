@@ -150,7 +150,12 @@ Compute (show 42).
 (** **** Exercise: 1 star (showNatBool)  *)
 (** Write a [Show] instance for pairs of a nat and a bool. *)
 
-(* FILL IN HERE *)
+Instance showNatBool : Show (nat * bool) :=
+{
+  show := fun nb =>
+  "(" ++ (string_of_nat (fst nb)) ++ "," ++ (if (snd nb) then "true" else "false") ++ ")"
+}.
+
 (** [] *)
 
 (** Next, we can define functions that use the overloaded function
@@ -190,6 +195,7 @@ Compute (showTwo Red Green).
 (** What happens if we forget the class constraints in the definitions
     of [showOne] or [showTwo]?  Try deleting them and see what
     happens. *)
+(* ERROR *)
 (** [] *)    
 
 (** Of course, [Show] is not the only interesting typeclass.  There
@@ -240,7 +246,11 @@ Instance eqNat : Eq nat :=
     checking equality makes perfect sense.  Write an [Eq] instance for
     this type. *)
 
-(* FILL IN HERE *)
+Instance eqBoolArrowBool : Eq (bool -> bool) :=
+{
+  eqb := fun f g => (f true =? g true) && (f false =? g false)
+}.
+
 (** [] *)
 
 (* ================================================================= *)
@@ -289,7 +299,31 @@ Instance showList {A : Type} `{Show A} : Show (list A) :=
 (** Write an [Eq] instance for lists and [Show] and [Eq] instances for
     the [option] type constructor. *)
 
-(* FILL IN HERE *)
+Instance eqList {A : Type} `{Eq A} `{Eq (list A)} : Eq (list A) :=
+{
+  eqb l1 l2 := match l1, l2 with
+  | [], [] => true
+  | [], _ => false
+  | h1 :: t1, [] => false
+  | h1 :: t1, h2 :: t2 => andb (eqb h1 h2) (eqb t1 t2)
+  end
+}.
+
+Instance showOption {A : Type} `{Show A} : Show (option A) := {
+  show a := match a with
+  | Some a' => "Some " ++ show a'
+  | None => "None"
+  end
+}.
+
+Instance eqOption {A : Type} `{Eq A} : Eq (option A) := {
+  eqb a b := match a, b with
+  | Some a', Some b' => eqb a' b'
+  | None, None => true
+  | _, _ => false
+  end
+}.
+
 (** [] *)
 
 (** **** Exercise: 3 stars, optional (boolArrowA)  *)
@@ -297,7 +331,10 @@ Instance showList {A : Type} `{Show A} : Show (list A) :=
     an equality instance for any type of the form [bool->A], where [A]
     itself is an [Eq] type.  Show that it works for [bool->bool->nat]. *)
 
-(* FILL IN HERE *)
+Instance eqBoolArrowA {A : Type} `{Eq A} : Eq (bool -> A) := {
+  eqb f g := andb (eqb (f true) (g true)) (eqb (f false) (g false))
+}.
+
 (** [] *)
 
 (* ================================================================= *)
@@ -356,18 +393,40 @@ Definition max {A: Type} `{Eq A} `{Ord A} (x y : A) : A :=
 (** **** Exercise: 1 star (missingConstraintAgain)  *)
 (** What does Coq say if the [Ord] class constraint is left out of the
     definition of [max]?  What about the [Eq] class constraint? *)
+(* We don't need Eq constraint actually. *)
 (** [] *)    
 
 (** **** Exercise: 3 stars (ordMisc)  *)
 (** Define [Ord] instances for options and pairs. *)
 
-(* FILL IN HERE *)
+Instance optionOrd {A : Type} `{Ord A} : Ord (option A) := {
+  le a b := match a, b with
+  | Some a', Some b' => le a' b'
+  | None, None => true
+  | _, _ => false
+  end
+}.
+
+Instance pairOrd {A B : Type} `{Ord A} `{Ord B} : Ord (A * B) := {
+  le p1 p2 := match p1, p2 with
+  | (x1, y1), (x2, y2) => if eqb x1 x2 then le y1 y2 else le x1 x2
+  end
+}.
+
 (** [] *)
 
 (** **** Exercise: 3 stars (ordList)  *)
 (** For a little more practice, define an [Ord] instance for lists. *)
 
-(* FILL IN HERE *)
+Instance listOrd {A : Type} `{Ord A} `{Ord (list A)} : Ord (list A) := {
+  le l1 l2 := match l1, l2 with
+  | [], [] => true
+  | [], _ => true
+  | h1 :: t1, [] => false
+  | h1 :: t1, h2 :: t2 => if eqb h1 h2 then le t1 t2 else le h1 h2
+  end
+}.
+
 (** [] *)
 
 (* ################################################################# *)
@@ -716,7 +775,7 @@ Unset Printing Implicit.
     Show" in the output and have a look at the entries for [showNat]
     and [showPair]. *)
 
-(* Print HintDb typeclass_instances. *)
+Print HintDb typeclass_instances.
 (** [] *)
 
 (** We can see what's happening during the instance inference process
@@ -942,7 +1001,20 @@ Defined.
 (** Give instance declarations showing that, if [P] and [Q] are
     decidable propositions, then so are [~P] and [P\/Q]. *)
 
-(* FILL IN HERE *)
+Instance Dec_neg {P} {H : Dec P} : Dec (~P).
+Proof.
+constructor. unfold decidable.
+destruct H. destruct dec0; auto.
+Qed.
+
+Instance Dec_disj {P Q} {H : Dec P} {I : Dec Q} : Dec (P \/ Q).
+Proof.
+constructor. unfold decidable.
+destruct H. destruct dec0; auto.
+destruct I. destruct dec0; auto.
+right. intro. destruct H; auto.
+Qed.
+
 (** [] *)
 
 (** **** Exercise: 4 stars (Dec_All)  *)
@@ -959,7 +1031,18 @@ Fixpoint All {T : Type} (P : T -> Prop) (l : list T) : Prop :=
 (** Create an instance of [Dec] for [All P l], given that [P a] is
     decidable for every [a]. *)
 
-(* FILL IN HERE *)
+Instance Dec_All {A} {P} {H : forall a, Dec (P a)} (l: list A) : Dec (All P l).
+Proof.
+constructor. unfold decidable.
+induction l.
+- left. simpl. auto.
+- simpl. destruct (H a). destruct dec0; destruct IHl.
+  + auto.
+  + right. intro. destruct H0. auto.
+  + right. intro. destruct H0. auto.
+  + right. intro. destruct H0. auto.
+Qed.
+
 (** [] *)
 
 (** One reason for doing all this is that it makes it easy to move
